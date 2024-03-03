@@ -912,4 +912,4 @@ $ SPLUNK_PASSWORD=<password> docker-compose up -d
 Then, visit SplunkWeb on your browser with the root endpoint in the URL, such as `http://localhost:8000/splunkweb`.
 
 ## More
-There are a variety of Docker compose scenarios in the `docker-splunk` repo [here](https://github.com/splunk/docker-splunk/tree/develop/test_scenarios). Feel free to use any of those for reference in deploying different topologies!
+There are a variety of Docker compose scenarios in the `docker-splunk` repo [here](https://github.com/khulnasoft-lab/docker-splunk/tree/develop/test_scenarios). Feel free to use any of those for reference in deploying different topologies!
