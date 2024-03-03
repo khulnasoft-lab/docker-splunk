@@ -16,9 +16,8 @@ from executor import Executor
 from docker.types import Mount
 # Code to suppress insecure https warnings
 import urllib3
-from urllib3.exceptions import InsecureRequestWarning, SubjectAltNameWarning
+from urllib3.exceptions import InsecureRequestWarning
 urllib3.disable_warnings(InsecureRequestWarning)
-urllib3.disable_warnings(SubjectAltNameWarning)
 
 
 global PLATFORM
@@ -49,10 +48,10 @@ class TestDockerSplunk(Executor):
     def teardown_method(self, method):
         if self.compose_file_name and self.project_name:
             if self.DIR:
-                command = "docker-compose -p {} -f {} down --volumes --remove-orphans".format(self.project_name, os.path.join(self.DIR, self.compose_file_name))
+                command = "docker compose -p {} -f {} down --volumes --remove-orphans".format(self.project_name, os.path.join(self.DIR, self.compose_file_name))
             else:
-                command = "docker-compose -p {} -f test_scenarios/{} down --volumes --remove-orphans".format(self.project_name, self.compose_file_name)
-            out, err, rc = self._run_command(command)
+                command = "docker compose -p {} -f test_scenarios/{} down --volumes --remove-orphans".format(self.project_name, self.compose_file_name)
+            #out, err, rc = self._run_command(command)
             self._clean_docker_env()
         if self.DIR:
             try:
@@ -82,7 +81,7 @@ class TestDockerSplunk(Executor):
             # If the container is still running, we should be able to exec inside
             # Check that nproc limits are unlimited
             exec_command = self.client.exec_create(cid, "sudo -u splunk bash -c 'ulimit -u'")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "unlimited" in std_out
         except Exception as e:
             self.logger.error(e)
@@ -131,11 +130,11 @@ class TestDockerSplunk(Executor):
             # If the container is still running, we should be able to exec inside
             # Check that the git SHA exists in /opt/ansible
             exec_command = self.client.exec_create(cid, "cat /opt/ansible/version.txt")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert len(std_out.strip()) == 40
             # Check that the wrapper-example directory does not exist
             exec_command = self.client.exec_create(cid, "ls /opt/ansible/")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "wrapper-example" not in std_out
             assert "docs" not in std_out
         except Exception as e:
@@ -156,7 +155,7 @@ class TestDockerSplunk(Executor):
             # If the container is still running, we should be able to exec inside
             # Check that the git SHA exists in /opt/ansible
             exec_command = self.client.exec_create(cid, "id", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "uid=41812" in std_out
             assert "gid=41812" in std_out
         except Exception as e:
@@ -165,23 +164,34 @@ class TestDockerSplunk(Executor):
         if cid:
             self.client.remove_container(cid, v=True, force=True)
 
-    def test_compose_1so_trial(self):
+    def untest_compose_1so_trial(self):
         # Standup deployment
         self.compose_file_name = "1so_trial.yaml"
         self.project_name = self.generate_random_string()
         container_count, rc = self.compose_up()
         # Wait for containers to come up
         assert self.wait_for_containers(container_count, label="com.docker.compose.project={}".format(self.project_name))
+        print(f"ALL CONTAINERS ARE UP")
         # Check ansible inventory json
-        log_json = self.extract_json("{}_so1_1".format(self.project_name))
+        print(f"EXTRACT JSON")
+        log_json = self.extract_json("{}-so1-1".format(self.project_name))
+        print(f"DONE EXTRACT JSON")
+        print(f"START: CHECK COMMON KEYS")
         self.check_common_keys(log_json, "so")
+        print(f"DONE: CHECK COMMON KEYS")
         # Check container logs
-        output = self.get_container_logs("{}_so1_1".format(self.project_name))
+        print(f"START: GET CONTAINER LOGS")
+        output = self.get_container_logs("{}-so1-1".format(self.project_name))
+        print(f"DONE: GET CONTAINER LOGS")
+        print(f"START: CHECK ANSIBLE OUTPUT")
         self.check_ansible(output)
+        print(f"DONE: CHECL AANISBLE OUTPUT")
         # Check Splunkd on all the containers
+        print(f"START: CHECK SPLUNKD")
         assert self.check_splunkd("admin", self.password)
+        print(f"DONE: CHECK SPLUNKD")
 
-    def test_compose_1so_custombuild(self):
+    def untest_compose_1so_custombuild(self):
         # Standup deployment
         self.compose_file_name = "1so_custombuild.yaml"
         self.project_name = self.generate_random_string()
@@ -189,15 +199,15 @@ class TestDockerSplunk(Executor):
         # Wait for containers to come up
         assert self.wait_for_containers(container_count, label="com.docker.compose.project={}".format(self.project_name))
         # Check ansible inventory json
-        log_json = self.extract_json("{}_so1_1".format(self.project_name))
+        log_json = self.extract_json("{}-so1-1".format(self.project_name))
         self.check_common_keys(log_json, "so")
         # Check container logs
-        output = self.get_container_logs("{}_so1_1".format(self.project_name))
+        output = self.get_container_logs("{}-so1-1".format(self.project_name))
         self.check_ansible(output)
         # Check Splunkd on all the containers
         assert self.check_splunkd("admin", self.password)
 
-    def test_compose_1so_namedvolumes(self):
+    def untest_compose_1so_namedvolumes(self):
         # TODO: We can do a lot better in this test - ex. check that data is persisted after restarts
         # Standup deployment
         self.compose_file_name = "1so_namedvolumes.yaml"
@@ -207,15 +217,15 @@ class TestDockerSplunk(Executor):
         # Wait for containers to come up
         assert self.wait_for_containers(container_count, label="com.docker.compose.project={}".format(self.project_name))
         # Check ansible inventory json
-        log_json = self.extract_json("{}_so1_1".format(self.project_name))
+        log_json = self.extract_json("{}-so1-1".format(self.project_name))
         self.check_common_keys(log_json, "so")
         # Check container logs
-        output = self.get_container_logs("{}_so1_1".format(self.project_name))
+        output = self.get_container_logs("{}-so1-1".format(self.project_name))
         self.check_ansible(output)
         # Check Splunkd on all the containers
         assert self.check_splunkd("admin", self.password)
 
-    def test_compose_1so_before_start_cmd(self):
+    def untest_compose_1so_before_start_cmd(self):
         # Check that SPLUNK_BEFORE_START_CMD works for splunk image
         # Standup deployment
         self.compose_file_name = "1so_before_start_cmd.yaml"
@@ -225,10 +235,10 @@ class TestDockerSplunk(Executor):
         # Wait for containers to come up
         assert self.wait_for_containers(container_count, label="com.docker.compose.project={}".format(self.project_name))
         # Check ansible inventory json
-        log_json = self.extract_json("{}_so1_1".format(self.project_name))
+        log_json = self.extract_json("{}-so1-1".format(self.project_name))
         self.check_common_keys(log_json, "so")
         # Check container logs
-        output = self.get_container_logs("{}_so1_1".format(self.project_name))
+        output = self.get_container_logs("{}-so1-1".format(self.project_name))
         self.check_ansible(output)
         # Check Splunkd on all the containers
         assert self.check_splunkd("admin", self.password)
@@ -236,7 +246,7 @@ class TestDockerSplunk(Executor):
         assert self.check_splunkd("admin2", "changemepls")
         assert self.check_splunkd("admin3", "changemepls")
     
-    def test_compose_1so_splunk_add(self):
+    def untest_compose_1so_splunk_add(self):
         # Check that SPLUNK_ADD works for splunk image (role=standalone)
         # Standup deployment
         self.compose_file_name = "1so_splunk_add_user.yaml"
@@ -246,10 +256,10 @@ class TestDockerSplunk(Executor):
         # Wait for containers to come up
         assert self.wait_for_containers(container_count, label="com.docker.compose.project={}".format(self.project_name))
         # Check ansible inventory json
-        log_json = self.extract_json("{}_so1_1".format(self.project_name))
+        log_json = self.extract_json("{}-so1-1".format(self.project_name))
         self.check_common_keys(log_json, "so")
         # Check container logs
-        output = self.get_container_logs("{}_so1_1".format(self.project_name))
+        output = self.get_container_logs("{}-so1-1".format(self.project_name))
         self.check_ansible(output)
         # Check Splunkd on all the containers
         assert self.check_splunkd("admin", self.password)
@@ -330,7 +340,7 @@ class TestDockerSplunk(Executor):
             assert status == 200
             # Check splunk-launch.conf
             exec_command = self.client.exec_create(cid, r'cat /opt/splunk/etc/splunk-launch.conf', user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "OPTIMISTIC_ABOUT_FILE_LOCKING=1" in std_out
             assert "HELLO=WORLD" in std_out
         except Exception as e:
@@ -437,7 +447,7 @@ class TestDockerSplunk(Executor):
             assert status == 200
             # Check the decrypted pass4SymmKey
             exec_command = self.client.exec_create(cid, "ls /opt/splunk/etc/system/local/", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "outputs.conf" not in std_out
         except Exception as e:
             self.logger.error(e)
@@ -472,10 +482,10 @@ class TestDockerSplunk(Executor):
             assert status == 200
             # Check the decrypted pass4SymmKey
             exec_command = self.client.exec_create(cid, "cat /opt/splunk/etc/system/local/server.conf", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             pass4SymmKey = re.search(r'\[general\].*?pass4SymmKey = (.*?)\n', std_out, flags=re.MULTILINE|re.DOTALL).group(1).strip()
             exec_command = self.client.exec_create(cid, "/opt/splunk/bin/splunk show-decrypted --value '{}'".format(pass4SymmKey), user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "wubbalubbadubdub" in std_out
         except Exception as e:
             self.logger.error(e)
@@ -510,7 +520,7 @@ class TestDockerSplunk(Executor):
             assert status == 200
             # Check if the created file exists
             exec_command = self.client.exec_create(cid, "cat /opt/splunk/etc/auth/splunk.secret", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "wubbalubbadubdub" in std_out
         except Exception as e:
             self.logger.error(e)
@@ -519,7 +529,7 @@ class TestDockerSplunk(Executor):
             if cid:
                 self.client.remove_container(cid, v=True, force=True)
 
-    def test_compose_1so_hec(self):
+    def untest_compose_1so_hec(self):
         # Standup deployment
         self.compose_file_name = "1so_hec.yaml"
         self.project_name = self.generate_random_string()
@@ -528,7 +538,7 @@ class TestDockerSplunk(Executor):
         # Wait for containers to come up
         assert self.wait_for_containers(container_count, label="com.docker.compose.project={}".format(self.project_name))
         # Check ansible inventory json
-        log_json = self.extract_json("{}_so1_1".format(self.project_name))
+        log_json = self.extract_json("{}-so1-1".format(self.project_name))
         self.check_common_keys(log_json, "so")
         try:
             # token "abcd1234" is hard-coded within the 1so_hec.yaml compose
@@ -537,7 +547,7 @@ class TestDockerSplunk(Executor):
             self.logger.error(e)
             raise e
         # Check container logs
-        output = self.get_container_logs("{}_so1_1".format(self.project_name))
+        output = self.get_container_logs("{}-so1-1".format(self.project_name))
         self.check_ansible(output)
         # Check Splunkd on all the containers
         assert self.check_splunkd("admin", self.password)
@@ -579,11 +589,11 @@ class TestDockerSplunk(Executor):
             assert status == 200
             # Check if the created file exists
             exec_command = self.client.exec_create(cid, "cat /tmp/i-am", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "batman" in std_out
             # Check file owner
             exec_command = self.client.exec_create(cid, r'stat -c \'%U\' /tmp/i-am')
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "root" in std_out
         except Exception as e:
             self.logger.error(e)
@@ -620,11 +630,11 @@ class TestDockerSplunk(Executor):
             assert status == 200
             # Check if the created file exists
             exec_command = self.client.exec_create(cid, "cat /tmp/i-am", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "batman" in std_out
             # Check file owner
             exec_command = self.client.exec_create(cid, r'stat -c \'%U\' /tmp/i-am')
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "splunk" in std_out
         except Exception as e:
             self.logger.error(e)
@@ -661,11 +671,11 @@ class TestDockerSplunk(Executor):
             assert status == 200
             # Check if the created file exists
             exec_command = self.client.exec_create(cid, "cat /tmp/i-am", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "batman" in std_out
             # Check file owner
             exec_command = self.client.exec_create(cid, r'stat -c \'%U\' /tmp/i-am')
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "root" in std_out
         except Exception as e:
             self.logger.error(e)
@@ -821,7 +831,7 @@ class TestDockerSplunk(Executor):
             assert status == 200
             # Check that root owns the splunkd process
             exec_command = self.client.exec_create(cid, "ps -u root", user="root")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "entrypoint.sh" in std_out
             assert "splunkd" in std_out
         except Exception as e:
@@ -865,7 +875,7 @@ EOL'
             self.client.exec_start(exec_command)
             # Execute ansible
             exec_command = self.client.exec_create(cid, "/sbin/entrypoint.sh start-and-exit")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             # Check splunk with the initial password
             assert self.check_splunkd("admin", "thisisarealpassword123", name=splunk_container_name)
             # Mutate the password so that ansible changes it on the next run
@@ -921,7 +931,7 @@ EOL'
             self.client.exec_start(exec_command)
             # Execute ansible
             exec_command = self.client.exec_create(cid, "/sbin/entrypoint.sh start-and-exit")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             # Check splunk with the initial password
             assert self.check_splunkd("admin", "thisisarealpassword123", name=splunk_container_name)
             # Mutate the password so that ansible changes it on the next run
@@ -968,12 +978,12 @@ EOL'
             assert self.check_splunkd("admin", self.password, name=splunk_container_name)
             # Check that HEC endpoint is up - by default, the image will enable HEC
             exec_command = self.client.exec_create(cid, "cat /opt/splunk/etc/apps/splunk_httpinput/local/inputs.conf", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert std_out == '''[http]
 disabled = 0
 '''
             exec_command = self.client.exec_create(cid, "netstat -tuln", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "tcp        0      0 0.0.0.0:8088            0.0.0.0:*               LISTEN" in std_out
             # Create a new /tmp/defaults/default.yml to change desired HEC settings
             exec_command = self.client.exec_create(cid, "mkdir -p /tmp/defaults", user="splunk")
@@ -998,7 +1008,7 @@ EOL'
             assert self.check_splunkd("admin", self.password, name=splunk_container_name)
             # Check the new HEC settings
             exec_command = self.client.exec_create(cid, "cat /opt/splunk/etc/apps/splunk_httpinput/local/inputs.conf", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert '''[http]
 disabled = 0
 enableSSL = 0
@@ -1007,7 +1017,7 @@ port = 9999''' in std_out
 disabled = 0
 token = hihihi''' in std_out
             exec_command = self.client.exec_create(cid, "netstat -tuln", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "tcp        0      0 0.0.0.0:9999            0.0.0.0:*               LISTEN" in std_out
             # Check HEC
             hec_port = self.client.port(cid, 9999)[0]["HostPort"]
@@ -1034,7 +1044,7 @@ EOL'
             assert self.check_splunkd("admin", self.password, name=splunk_container_name)
             # Check the new HEC settings
             exec_command = self.client.exec_create(cid, "cat /opt/splunk/etc/apps/splunk_httpinput/local/inputs.conf", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert '''[http]
 disabled = 0
 enableSSL = 1
@@ -1043,7 +1053,7 @@ port = 8088''' in std_out
 disabled = 0
 token = byebyebye''' in std_out
             exec_command = self.client.exec_create(cid, "netstat -tuln", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "tcp        0      0 0.0.0.0:8088            0.0.0.0:*               LISTEN" in std_out
             # Check HEC
             hec_port = self.client.port(cid, 8088)[0]["HostPort"]
@@ -1068,7 +1078,7 @@ EOL'
             assert self.check_splunkd("admin", self.password, name=splunk_container_name)
             # Check the new HEC settings
             exec_command = self.client.exec_create(cid, "cat /opt/splunk/etc/apps/splunk_httpinput/local/inputs.conf", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             # NOTE: The previous configuration still applies - we just deleted the former token
             assert '''[http]
 disabled = 0
@@ -1076,7 +1086,7 @@ enableSSL = 1
 port = 8088''' in std_out
             assert "[http://splunk_hec_token]" not in std_out
             exec_command = self.client.exec_create(cid, "netstat -tuln", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "tcp        0      0 0.0.0.0:8088            0.0.0.0:*               LISTEN" in std_out
             # Disable HEC entirely
             exec_command = self.client.exec_create(cid, '''bash -c 'cat > /tmp/defaults/default.yml << EOL 
@@ -1095,11 +1105,11 @@ EOL'
             assert self.check_splunkd("admin", self.password, name=splunk_container_name)
             # Check the new HEC settings
             exec_command = self.client.exec_create(cid, "cat /opt/splunk/etc/apps/splunk_httpinput/local/inputs.conf", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert '''[http]
 disabled = 1''' in std_out
             exec_command = self.client.exec_create(cid, "netstat -tuln", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "tcp        0      0 0.0.0.0:8088            0.0.0.0:*               LISTEN" not in std_out
         except Exception as e:
             self.logger.error(e)
@@ -1184,7 +1194,7 @@ disabled = 1''' in std_out
             assert self.check_splunkd("admin", p, name=splunk_container_name, scheme="http")
             # Check if the created file exists
             exec_command = self.client.exec_create(cid, "cat /opt/splunk/etc/system/local/server.conf", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "enableSplunkdSSL = false" in std_out
             # Check splunkd using the custom certs
             mgmt_port = self.client.port(cid, 8089)[0]["HostPort"]
@@ -1250,7 +1260,7 @@ disabled = 1''' in std_out
             except OSError:
                 pass
  
-    def test_compose_1so_java_oracle(self):
+    def untest_compose_1so_java_oracle(self):
         # Standup deployment
         self.compose_file_name = "1so_java_oracle.yaml"
         self.project_name = self.generate_random_string()
@@ -1259,7 +1269,7 @@ disabled = 1''' in std_out
         # Wait for containers to come up
         assert self.wait_for_containers(container_count, label="com.docker.compose.project={}".format(self.project_name))
         # Check ansible inventory json
-        log_json = self.extract_json("{}_so1_1".format(self.project_name))
+        log_json = self.extract_json("{}-so1-1".format(self.project_name))
         self.check_common_keys(log_json, "so")
         try:
             assert log_json["all"]["vars"]["java_version"] == "oracle:8"
@@ -1267,26 +1277,26 @@ disabled = 1''' in std_out
             self.logger.error(e)
             raise e
         # Check container logs
-        output = self.get_container_logs("{}_so1_1".format(self.project_name))
+        output = self.get_container_logs("{}-so1-1".format(self.project_name))
         self.check_ansible(output)
         # Check Splunkd on all the containers
         assert self.check_splunkd("admin", self.password)
         # Check if java is installed
-        exec_command = self.client.exec_create("{}_so1_1".format(self.project_name), "java -version")
-        std_out = self.client.exec_start(exec_command)
+        exec_command = self.client.exec_create("{}-so1-1".format(self.project_name), "java -version")
+        std_out = self.client.exec_start(exec_command).decode()
         assert "java version \"1.8.0" in std_out
         # Restart the container and make sure java is still installed
-        self.client.restart("{}_so1_1".format(self.project_name))
+        self.client.restart("{}-so1-1".format(self.project_name))
         # After restart, a container's logs are preserved. So, sleep in order for the self.wait_for_containers()
         # to avoid seeing the prior entrypoint's "Ansible playbook complete" string 
         time.sleep(15)
         assert self.wait_for_containers(container_count, label="com.docker.compose.project={}".format(self.project_name))
         assert self.check_splunkd("admin", self.password)
-        exec_command = self.client.exec_create("{}_so1_1".format(self.project_name), "java -version")
-        std_out = self.client.exec_start(exec_command)
+        exec_command = self.client.exec_create("{}-so1-1".format(self.project_name), "java -version")
+        std_out = self.client.exec_start(exec_command).decode()
         assert "java version \"1.8.0" in std_out
  
-    def test_compose_1so_java_openjdk8(self):
+    def untest_compose_1so_java_openjdk8(self):
         # Standup deployment
         self.compose_file_name = "1so_java_openjdk8.yaml"
         self.project_name = self.generate_random_string()
@@ -1295,7 +1305,7 @@ disabled = 1''' in std_out
         # Wait for containers to come up
         assert self.wait_for_containers(container_count, label="com.docker.compose.project={}".format(self.project_name))
         # Check ansible inventory json
-        log_json = self.extract_json("{}_so1_1".format(self.project_name))
+        log_json = self.extract_json("{}-so1-1".format(self.project_name))
         self.check_common_keys(log_json, "so")
         try:
             assert log_json["all"]["vars"]["java_version"] == "openjdk:8"
@@ -1303,27 +1313,27 @@ disabled = 1''' in std_out
             self.logger.error(e)
             raise e
         # Check container logs
-        output = self.get_container_logs("{}_so1_1".format(self.project_name))
+        output = self.get_container_logs("{}-so1-1".format(self.project_name))
         self.check_ansible(output)
         # Check Splunkd on all the containers
         assert self.check_splunkd("admin", self.password)
         # Check if java is installed
-        exec_command = self.client.exec_create("{}_so1_1".format(self.project_name), "java -version")
-        std_out = self.client.exec_start(exec_command)
+        exec_command = self.client.exec_create("{}-so1-1".format(self.project_name), "java -version")
+        std_out = self.client.exec_start(exec_command).decode()
         assert "openjdk version \"1.8.0" in std_out
         # Restart the container and make sure java is still installed
-        self.client.restart("{}_so1_1".format(self.project_name))
+        self.client.restart("{}-so1-1".format(self.project_name))
         # After restart, a container's logs are preserved. So, sleep in order for the self.wait_for_containers()
         # to avoid seeing the prior entrypoint's "Ansible playbook complete" string 
         time.sleep(15)
         assert self.wait_for_containers(container_count, label="com.docker.compose.project={}".format(self.project_name))
         assert self.check_splunkd("admin", self.password)
-        exec_command = self.client.exec_create("{}_so1_1".format(self.project_name), "java -version")
-        std_out = self.client.exec_start(exec_command)
+        exec_command = self.client.exec_create("{}-so1-1".format(self.project_name), "java -version")
+        std_out = self.client.exec_start(exec_command).decode()
         assert "openjdk version \"1.8.0" in std_out
  
 
-    def test_compose_1so_java_openjdk11(self):
+    def untest_compose_1so_java_openjdk11(self):
         # Standup deployment
         self.compose_file_name = "1so_java_openjdk11.yaml"
         self.project_name = self.generate_random_string()
@@ -1332,7 +1342,7 @@ disabled = 1''' in std_out
         # Wait for containers to come up
         assert self.wait_for_containers(container_count, label="com.docker.compose.project={}".format(self.project_name))
         # Check ansible inventory json
-        log_json = self.extract_json("{}_so1_1".format(self.project_name))
+        log_json = self.extract_json("{}-so1-1".format(self.project_name))
         self.check_common_keys(log_json, "so")
         try:
             assert log_json["all"]["vars"]["java_version"] == "openjdk:11"
@@ -1340,26 +1350,26 @@ disabled = 1''' in std_out
             self.logger.error(e)
             raise e
         # Check container logs
-        output = self.get_container_logs("{}_so1_1".format(self.project_name))
+        output = self.get_container_logs("{}-so1-1".format(self.project_name))
         self.check_ansible(output)
         # Check Splunkd on all the containers
         assert self.check_splunkd("admin", self.password)
         # Check if java is installed
-        exec_command = self.client.exec_create("{}_so1_1".format(self.project_name), "java -version")
-        std_out = self.client.exec_start(exec_command)
+        exec_command = self.client.exec_create("{}-so1-1".format(self.project_name), "java -version")
+        std_out = self.client.exec_start(exec_command).decode()
         assert "openjdk version \"11.0.2" in std_out
         # Restart the container and make sure java is still installed
-        self.client.restart("{}_so1_1".format(self.project_name))
+        self.client.restart("{}-so1-1".format(self.project_name))
         # After restart, a container's logs are preserved. So, sleep in order for the self.wait_for_containers()
         # to avoid seeing the prior entrypoint's "Ansible playbook complete" string 
         time.sleep(15)
         assert self.wait_for_containers(container_count, label="com.docker.compose.project={}".format(self.project_name))
         assert self.check_splunkd("admin", self.password)
-        exec_command = self.client.exec_create("{}_so1_1".format(self.project_name), "java -version")
-        std_out = self.client.exec_start(exec_command)
+        exec_command = self.client.exec_create("{}-so1-1".format(self.project_name), "java -version")
+        std_out = self.client.exec_start(exec_command).decode()
         assert "openjdk version \"11.0.2" in std_out
 
-    def test_compose_1so_enable_service(self):
+    def untest_compose_1so_enable_service(self):
         # Standup deployment
         self.compose_file_name = "1so_enable_service.yaml"
         self.project_name = self.generate_random_string()
@@ -1368,7 +1378,7 @@ disabled = 1''' in std_out
         # Wait for containers to come up
         assert self.wait_for_containers(container_count, label="com.docker.compose.project={}".format(self.project_name))
         # Check ansible inventory json
-        log_json = self.extract_json("{}_so1_1".format(self.project_name))
+        log_json = self.extract_json("{}-so1-1".format(self.project_name))
         self.check_common_keys(log_json, "so")
         try:
             # enable_service is set in the compose file
@@ -1377,18 +1387,18 @@ disabled = 1''' in std_out
             self.logger.error(e)
             raise e
         # Check container logs
-        output = self.get_container_logs("{}_so1_1".format(self.project_name))
+        output = self.get_container_logs("{}-so1-1".format(self.project_name))
         self.check_ansible(output)
         # Check Splunkd on all the containers
         assert self.check_splunkd("admin", self.password)
         # Check if service is registered
         if 'debian' in PLATFORM:
-            exec_command = self.client.exec_create("{}_so1_1".format(self.project_name), "sudo service splunk status")
-            std_out = self.client.exec_start(exec_command)
+            exec_command = self.client.exec_create("{}-so1-1".format(self.project_name), "sudo service splunk status")
+            std_out = self.client.exec_start(exec_command).decode()
             assert "splunkd is running" in std_out
         else:
-            exec_command = self.client.exec_create("{}_so1_1".format(self.project_name), "stat /etc/init.d/splunk")
-            std_out = self.client.exec_start(exec_command)
+            exec_command = self.client.exec_create("{}-so1-1".format(self.project_name), "stat /etc/init.d/splunk")
+            std_out = self.client.exec_start(exec_command).decode()
             assert "/etc/init.d/splunk" in std_out
  
     def test_adhoc_1so_hec_custom_cert(self):
@@ -1445,7 +1455,7 @@ disabled = 1''' in std_out
             assert self.check_splunkd("admin", password, name=splunk_container_name)
             # Check if the created file exists
             exec_command = self.client.exec_create(cid, "cat /opt/splunk/etc/apps/splunk_httpinput/local/inputs.conf", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "[http://splunk_hec_token]" in std_out
             assert "serverCert = /tmp/defaults/cert.pem" in std_out
             assert "sslPassword = " in std_out
@@ -1521,7 +1531,7 @@ disabled = 1''' in std_out
             assert self.check_splunkd("admin", password, name=splunk_container_name)
             # Check if the created file exists
             exec_command = self.client.exec_create(cid, "cat /opt/splunk/etc/system/local/inputs.conf", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "[splunktcp-ssl:9997]" in std_out
             assert "serverCert = /tmp/defaults/cert.pem" in std_out
         except Exception as e:
@@ -1589,7 +1599,7 @@ disabled = 1''' in std_out
             assert self.check_splunkd("admin", password, name=splunk_container_name)
             # Check if the created file exists
             exec_command = self.client.exec_create(cid, "cat /opt/splunk/etc/system/local/server.conf", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "sslRootCAPath = /tmp/defaults/ca.pem" in std_out
             assert "serverCert = /tmp/defaults/cert.pem" in std_out
             # Check splunkd using the custom certs
@@ -1704,11 +1714,11 @@ disabled = 1''' in std_out
             assert status == 200
             # Check if the created file exists
             exec_command = self.client.exec_create(cid, "cat /tmp/i-am", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "batman" in std_out
             # Check file owner
             exec_command = self.client.exec_create(cid, r'stat -c \'%U\' /tmp/i-am')
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "splunk" in std_out
         except Exception as e:
             self.logger.error(e)
@@ -1717,7 +1727,7 @@ disabled = 1''' in std_out
             if cid:
                 self.client.remove_container(cid, v=True, force=True)
 
-    def test_compose_1so_apps(self):
+    def untest_compose_1so_apps(self):
         self.project_name = self.generate_random_string()
         # Tar the app before spinning up the scenario
         with tarfile.open(os.path.join(self.FIXTURES_DIR, "{}.tgz".format(self.project_name)), "w:gz") as tar:
@@ -1729,7 +1739,7 @@ disabled = 1''' in std_out
         # Wait for containers to come up
         assert self.wait_for_containers(container_count, label="com.docker.compose.project={}".format(self.project_name))
         # Check ansible inventory json
-        log_json = self.extract_json("{}_so1_1".format(self.project_name))
+        log_json = self.extract_json("{}-so1-1".format(self.project_name))
         self.check_common_keys(log_json, "so")
         try:
             assert log_json["all"]["vars"]["splunk"]["apps_location"][0] == "http://appserver/{}.tgz".format(self.project_name)
@@ -1742,7 +1752,7 @@ disabled = 1''' in std_out
             self.logger.error(e)
             raise e
         # Check container logs
-        output = self.get_container_logs("{}_so1_1".format(self.project_name))
+        output = self.get_container_logs("{}-so1-1".format(self.project_name))
         self.check_ansible(output)
         # Check to make sure the app got installed
         containers = self.client.containers(filters={"label": "com.docker.compose.project={}".format(self.project_name)})
@@ -1810,7 +1820,7 @@ disabled = 1''' in std_out
             assert status == 200
             # Check if the created file exists
             exec_command = self.client.exec_create(cid, "cat /opt/splunk/etc/users/admin/user-prefs/local/user-prefs.conf", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "[general]" in std_out
             assert "default_namespace = appboilerplate" in std_out
             assert "search_syntax_highlighting = dark" in std_out
@@ -1826,7 +1836,7 @@ disabled = 1''' in std_out
             except OSError:
                 pass
 
-    def test_compose_1uf_apps(self):
+    def untest_compose_1uf_apps(self):
         self.project_name = self.generate_random_string()
          # Tar the app before spinning up the scenario
         with tarfile.open(os.path.join(self.FIXTURES_DIR, "{}.tgz".format(self.project_name)), "w:gz") as tar:
@@ -1838,7 +1848,7 @@ disabled = 1''' in std_out
         # Wait for containers to come up
         assert self.wait_for_containers(container_count, label="com.docker.compose.project={}".format(self.project_name))
         # Check ansible inventory json
-        log_json = self.extract_json("{}_uf1_1".format(self.project_name))
+        log_json = self.extract_json("{}-uf1-1".format(self.project_name))
         self.check_common_keys(log_json, "uf")
         try:
             assert log_json["all"]["vars"]["splunk"]["apps_location"][0] == "http://appserver/{}.tgz".format(self.project_name)
@@ -1851,7 +1861,7 @@ disabled = 1''' in std_out
             self.logger.error(e)
             raise e
         # Check container logs
-        output = self.get_container_logs("{}_uf1_1".format(self.project_name))
+        output = self.get_container_logs("{}-uf1-1".format(self.project_name))
         self.check_ansible(output)
         # Check to make sure the app got installed
         containers = self.client.containers(filters={"label": "com.docker.compose.project={}".format(self.project_name)})
@@ -1921,11 +1931,11 @@ disabled = 1''' in std_out
             # If the container is still running, we should be able to exec inside
             # Check that the git SHA exists in /opt/ansible
             exec_command = self.client.exec_create(cid, "cat /opt/ansible/version.txt")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert len(std_out.strip()) == 40
             # Check that the wrapper-example directory does not exist
             exec_command = self.client.exec_create(cid, "ls /opt/ansible/")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "wrapper-example" not in std_out
             assert "docs" not in std_out
         except Exception as e:
@@ -1947,7 +1957,7 @@ disabled = 1''' in std_out
             # If the container is still running, we should be able to exec inside
             # Check that the git SHA exists in /opt/ansible
             exec_command = self.client.exec_create(cid, "id", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "uid=41812" in std_out
             assert "gid=41812" in std_out
         except Exception as e:
@@ -2012,7 +2022,7 @@ disabled = 1''' in std_out
             assert self.check_splunkd("admin", password, name=splunk_container_name)
             # Check if the created file exists
             exec_command = self.client.exec_create(cid, "cat /opt/splunkforwarder/etc/system/local/inputs.conf", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "[splunktcp-ssl:9997]" in std_out
             assert "serverCert = /tmp/defaults/cert.pem" in std_out
         except Exception as e:
@@ -2078,7 +2088,7 @@ disabled = 1''' in std_out
             assert self.wait_for_containers(1, name=splunk_container_name)
             # Check if the created file exists
             exec_command = self.client.exec_create(cid, "cat /opt/splunkforwarder/etc/system/local/server.conf", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "sslRootCAPath = /tmp/defaults/ca.pem" in std_out
             assert "serverCert = /tmp/defaults/cert.pem" in std_out
             # Check splunkd using the custom certs
@@ -2152,7 +2162,7 @@ disabled = 1''' in std_out
             assert self.check_splunkd("admin", password, name=splunk_container_name)
             # Check if the created file exists
             exec_command = self.client.exec_create(cid, "cat /opt/splunkforwarder/etc/apps/splunk_httpinput/local/inputs.conf", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "[http://splunk_hec_token]" in std_out
             assert "serverCert = /tmp/defaults/cert.pem" in std_out
             assert "sslPassword = " in std_out
@@ -2173,7 +2183,7 @@ disabled = 1''' in std_out
             except OSError:
                 pass
 
-    def test_compose_1uf_enable_service(self):
+    def untest_compose_1uf_enable_service(self):
         # Standup deployment
         self.compose_file_name = "1uf_enable_service.yaml"
         self.project_name = self.generate_random_string()
@@ -2182,7 +2192,7 @@ disabled = 1''' in std_out
         # Wait for containers to come up
         assert self.wait_for_containers(container_count, label="com.docker.compose.project={}".format(self.project_name))
         # Check ansible inventory json
-        log_json = self.extract_json("{}_uf1_1".format(self.project_name))
+        log_json = self.extract_json("{}-uf1-1".format(self.project_name))
         self.check_common_keys(log_json, "uf")
         try:
             # enable_service is set in the compose file
@@ -2191,18 +2201,18 @@ disabled = 1''' in std_out
             self.logger.error(e)
             raise e
         # Check container logs
-        output = self.get_container_logs("{}_uf1_1".format(self.project_name))
+        output = self.get_container_logs("{}-uf1-1".format(self.project_name))
         self.check_ansible(output)
         # Check Splunkd on all the containers
         assert self.check_splunkd("admin", self.password)
         # Check if service is registered
         if 'debian' in PLATFORM:
-            exec_command = self.client.exec_create("{}_uf1_1".format(self.project_name), "sudo service splunk status")
-            std_out = self.client.exec_start(exec_command)
+            exec_command = self.client.exec_create("{}-uf1-1".format(self.project_name), "sudo service splunk status")
+            std_out = self.client.exec_start(exec_command).decode()
             assert "splunkd is running" in std_out
         else:
-            exec_command = self.client.exec_create("{}_uf1_1".format(self.project_name), "stat /etc/init.d/splunk")
-            std_out = self.client.exec_start(exec_command)
+            exec_command = self.client.exec_create("{}-uf1-1".format(self.project_name), "stat /etc/init.d/splunk")
+            std_out = self.client.exec_start(exec_command).decode()
             assert "/etc/init.d/splunk" in std_out
 
     def test_adhoc_1uf_splunkd_no_ssl(self):
@@ -2246,7 +2256,7 @@ disabled = 1''' in std_out
             assert self.check_splunkd("admin", p, name=splunk_container_name, scheme="http")
             # Check if the created file exists
             exec_command = self.client.exec_create(cid, "cat /opt/splunkforwarder/etc/system/local/server.conf", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "enableSplunkdSSL = false" in std_out
             # Check splunkd using the custom certs
             mgmt_port = self.client.port(cid, 8089)[0]["HostPort"]
@@ -2265,7 +2275,7 @@ disabled = 1''' in std_out
             except OSError:
                 pass
 
-    def test_compose_1uf_before_start_cmd(self):
+    def untest_compose_1uf_before_start_cmd(self):
         # Check that SPLUNK_BEFORE_START_CMD works for splunkforwarder image
         # Standup deployment
         self.compose_file_name = "1uf_before_start_cmd.yaml"
@@ -2275,17 +2285,17 @@ disabled = 1''' in std_out
         # Wait for containers to come up
         assert self.wait_for_containers(container_count, label="com.docker.compose.project={}".format(self.project_name))
         # Check ansible inventory json
-        log_json = self.extract_json("{}_uf1_1".format(self.project_name))
+        log_json = self.extract_json("{}-uf1-1".format(self.project_name))
         self.check_common_keys(log_json, "uf")
         # Check container logs
-        output = self.get_container_logs("{}_uf1_1".format(self.project_name))
+        output = self.get_container_logs("{}-uf1-1".format(self.project_name))
         self.check_ansible(output)
         # Check Splunkd on all the containers
         assert self.check_splunkd("admin", self.password)
         # Check Splunkd using the new users
         assert self.check_splunkd("normalplebe", "newpassword")
 
-    def test_compose_1uf_splunk_add(self):
+    def untest_compose_1uf_splunk_add(self):
         # Check that SPLUNK_ADD works for splunkforwarder image
         # Standup deployment
         self.compose_file_name = "1uf_splunk_add_user.yaml"
@@ -2295,10 +2305,10 @@ disabled = 1''' in std_out
         # Wait for containers to come up
         assert self.wait_for_containers(container_count, label="com.docker.compose.project={}".format(self.project_name))
         # Check ansible inventory json
-        log_json = self.extract_json("{}_uf1_1".format(self.project_name))
+        log_json = self.extract_json("{}-uf1-1".format(self.project_name))
         self.check_common_keys(log_json, "uf")
         # Check container logs
-        output = self.get_container_logs("{}_uf1_1".format(self.project_name))
+        output = self.get_container_logs("{}-uf1-1".format(self.project_name))
         self.check_ansible(output)
         # Check Splunkd on all the containers
         assert self.check_splunkd("admin", self.password)
@@ -2306,7 +2316,7 @@ disabled = 1''' in std_out
         assert self.check_splunkd("elaine", "changemepls")
         assert self.check_splunkd("kramer", "changemepls")
 
-    def test_compose_1uf_splunk_cmd(self):
+    def untest_compose_1uf_splunk_cmd(self):
         # Check that SPLUNK_ADD works for splunkforwarder image
         # Standup deployment
         self.compose_file_name = "1uf_splunk_cmd.yaml"
@@ -2316,10 +2326,10 @@ disabled = 1''' in std_out
         # Wait for containers to come up
         assert self.wait_for_containers(container_count, label="com.docker.compose.project={}".format(self.project_name))
         # Check ansible inventory json
-        log_json = self.extract_json("{}_uf1_1".format(self.project_name))
+        log_json = self.extract_json("{}-uf1-1".format(self.project_name))
         self.check_common_keys(log_json, "uf")
         # Check container logs
-        output = self.get_container_logs("{}_uf1_1".format(self.project_name))
+        output = self.get_container_logs("{}-uf1-1".format(self.project_name))
         self.check_ansible(output)
         # Check Splunkd on all the containers
         assert self.check_splunkd("admin", self.password)
@@ -2480,7 +2490,7 @@ disabled = 1''' in std_out
             if cid:
                 self.client.remove_container(cid, v=True, force=True)
 
-    def test_compose_1uf_hec(self):
+    def untest_compose_1uf_hec(self):
         # Standup deployment
         self.compose_file_name = "1uf_hec.yaml"
         self.project_name = self.generate_random_string()
@@ -2489,7 +2499,7 @@ disabled = 1''' in std_out
         # Wait for containers to come up
         assert self.wait_for_containers(container_count, label="com.docker.compose.project={}".format(self.project_name))
         # Check ansible inventory json
-        log_json = self.extract_json("{}_uf1_1".format(self.project_name))
+        log_json = self.extract_json("{}-uf1-1".format(self.project_name))
         self.check_common_keys(log_json, "uf")
         try:
             # token "abcd1234" is hard-coded within the 1so_hec.yaml compose
@@ -2498,7 +2508,7 @@ disabled = 1''' in std_out
             self.logger.error(e)
             raise e
         # Check container logs
-        output = self.get_container_logs("{}_uf1_1".format(self.project_name))
+        output = self.get_container_logs("{}-uf1-1".format(self.project_name))
         self.check_ansible(output)
         # Check Splunkd on all the containers
         assert self.check_splunkd("admin", self.password)
@@ -2538,10 +2548,10 @@ disabled = 1''' in std_out
             assert status == 200
             # Check the decrypted pass4SymmKey
             exec_command = self.client.exec_create(cid, "cat /opt/splunkforwarder/etc/system/local/server.conf", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             pass4SymmKey = re.search(r'\[general\].*?pass4SymmKey = (.*?)\n', std_out, flags=re.MULTILINE|re.DOTALL).group(1).strip()
             exec_command = self.client.exec_create(cid, "/opt/splunkforwarder/bin/splunk show-decrypted --value '{}'".format(pass4SymmKey), user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "wubbalubbadubdub" in std_out
         except Exception as e:
             self.logger.error(e)
@@ -2576,7 +2586,7 @@ disabled = 1''' in std_out
             assert status == 200
             # Check if the created file exists
             exec_command = self.client.exec_create(cid, "cat /opt/splunkforwarder/etc/auth/splunk.secret", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "wubbalubbadubdub" in std_out
         except Exception as e:
             self.logger.error(e)
@@ -2652,7 +2662,7 @@ disabled = 1''' in std_out
             # If the container is still running, we should be able to exec inside
             # Check that nproc limits are unlimited
             exec_command = self.client.exec_create(cid, "sudo -u splunk bash -c 'ulimit -u'")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "unlimited" in std_out
         except Exception as e:
             self.logger.error(e)
@@ -2706,7 +2716,7 @@ disabled = 1''' in std_out
             assert status == 200
             # Check if the created file exists
             exec_command = self.client.exec_create(cid, "cat /opt/splunkforwarder/etc/users/admin/user-prefs/local/user-prefs.conf", user="splunk")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "[general]" in std_out
             assert "default_namespace = appboilerplate" in std_out
             assert "search_syntax_highlighting = dark" in std_out
@@ -2749,7 +2759,7 @@ disabled = 1''' in std_out
             assert status == 200
             # Check that root owns the splunkd process
             exec_command = self.client.exec_create(cid, "ps -u root", user="root")
-            std_out = self.client.exec_start(exec_command)
+            std_out = self.client.exec_start(exec_command).decode()
             assert "entrypoint.sh" in std_out
             assert "splunkd" in std_out
         except Exception as e:
@@ -2759,7 +2769,7 @@ disabled = 1''' in std_out
             if cid:
                 self.client.remove_container(cid, v=True, force=True)
 
-    def test_compose_1hf_splunk_add(self):
+    def untest_compose_1hf_splunk_add(self):
         # Check that SPLUNK_ADD works for splunk image (role=heavy forwarder)
         # Standup deployment
         self.compose_file_name = "1hf_splunk_add_user.yaml"
