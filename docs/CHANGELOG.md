@@ -10,7 +10,6 @@ Red Hat images will continue to be published.
 
 ## Navigation
 
-* [9.2.0.1](#9201)
 * [9.2.0](#920)
 * [9.1.3](#913)
 * [9.1.2](#912)
@@ -111,8 +110,6 @@ Red Hat images will continue to be published.
 #### splunk-ansible changes:
 * Docs updated
 * Bugfixes
-
----
 
 ## 9.2.0
 
