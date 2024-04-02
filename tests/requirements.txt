@@ -7,4 +7,4 @@ docker-compose
 pyasn1
 junit-xml
 pytest-xdist
-pytest-rerunfailures==8.0
+pytest-rerunfailures==14.0
