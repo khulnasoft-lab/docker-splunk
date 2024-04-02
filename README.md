@@ -1,7 +1,7 @@
 # Docker-Splunk: Containerizing Splunk Enterprise
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)&nbsp;
-[![GitHub release](https://img.shields.io/github/v/tag/splunk/docker-splunk?sort=semver&label=Version)](https://github.com/splunk/docker-splunk/releases)
+[![GitHub release](https://img.shields.io/github/v/tag/khulnasoft-lab/docker-splunk?sort=semver&label=Version)](https://github.com/khulnasoft-lab/docker-splunk/releases)
 
 Welcome to the official Splunk repository of Dockerfiles for building Splunk Enterprise and Splunk Universal Forwarder images for containerized deployments.
 
@@ -96,7 +96,7 @@ Visit the [Docker-Splunk documentation](https://splunk.github.io/docker-splunk/)
 ---
 
 ## Support
-Use the [GitHub issue tracker](https://github.com/splunk/docker-splunk/issues) to submit bugs or request features.
+Use the [GitHub issue tracker](https://github.com/khulnasoft-lab/docker-splunk/issues) to submit bugs or request features.
 
 If you have additional questions or need more support, you can:
 * Post a question to [Splunk Answers](http://answers.splunk.com)

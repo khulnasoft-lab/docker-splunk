@@ -1,6 +1,6 @@
 # Contributing to the Project
 
-This document is the single source of truth on contributing towards this codebase. Feel free to browse the [open issues](https://github.com/splunk/docker-splunk/issues) and file new ones - all feedback is welcome!
+This document is the single source of truth on contributing towards this codebase. Feel free to browse the [open issues](https://github.com/khulnasoft-lab/docker-splunk/issues) and file new ones - all feedback is welcome!
 
 ## Navigation
 
@@ -31,7 +31,7 @@ All contributors are expected to read our [Code of Conduct](contributing/code-of
 Help is always welcome! For example, documentation can always use improvement. There's always code that can be clarified, functionality that can be extended, and tests to be added to guarantee behavior. If you see something you think should be fixed, don't be afraid to own it.
 
 #### Bug reports and feature requests
-Have ideas on improvements? See something that needs work? While the community encourages everyone to contribute code, it is also appreciated when someone reports an issue. Please report any issues or bugs you find through our [issue tracker](https://github.com/splunk/docker-splunk/issues).
+Have ideas on improvements? See something that needs work? While the community encourages everyone to contribute code, it is also appreciated when someone reports an issue. Please report any issues or bugs you find through our [issue tracker](https://github.com/khulnasoft-lab/docker-splunk/issues).
 
 If you are reporting a bug, please include:
 * Your operating system name and version
@@ -43,7 +43,7 @@ We'd also like to hear your feature suggestions. Feel free to submit them as iss
 * Keeping the scope as narrow as possible. This will make it easier to implement
 
 #### Fixing issues
-Look through our [issue tracker](https://github.com/splunk/docker-splunk/issues) to find problems to fix! Feel free to comment and tag corresponding stakeholders or full-time maintainers of this project with any questions or concerns.
+Look through our [issue tracker](https://github.com/khulnasoft-lab/docker-splunk/issues) to find problems to fix! Feel free to comment and tag corresponding stakeholders or full-time maintainers of this project with any questions or concerns.
 
 #### Pull requests
 A pull request informs the project's core developers about the changes you want to review and merge. Once you submit a pull request, it enters a stage of code review where you and others can discuss its potential modifications and add more commits later on.
@@ -52,7 +52,7 @@ To learn more, see [Proposing changes to your work with pull requests
 ](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/proposing-changes-to-your-work-with-pull-requests) in the [GitHub Help Center](https://help.github.com/).
 
 To make a pull request against this project:
-1. Fork the [docker-splunk GitHub repository](https://github.com/splunk/docker-splunk/).
+1. Fork the [docker-splunk GitHub repository](https://github.com/khulnasoft-lab/docker-splunk/).
 1. Clone your fork and create a branch off of `develop`.
     ```
     # Create a local copy (or clone) of the repository

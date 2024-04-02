@@ -53,4 +53,4 @@ In the following conditions, Splunk Support reserves the right to deem your inst
 * You are running Splunk Enterprise and/or Splunk Universal Forwarder in a container on a platform not officially supported by Splunk.
 * You are using features not officially supported by Splunk.
 
-In the event you fall into an unsupported state, you may find support on [Splunk Answers](http://answers.splunk.com) or through the open-source communities found on GitHub for this [docker-splunk](https://github.com/splunk/docker-splunk) project or the related [splunk-ansible](https://www.github.com/splunk/splunk-ansible) project.
+In the event you fall into an unsupported state, you may find support on [Splunk Answers](http://answers.splunk.com) or through the open-source communities found on GitHub for this [docker-splunk](https://github.com/khulnasoft-lab/docker-splunk) project or the related [splunk-ansible](https://www.github.com/splunk/splunk-ansible) project.

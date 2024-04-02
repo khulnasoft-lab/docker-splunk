@@ -364,7 +364,7 @@ Fore further instructions, see [Configure Splunk forwarding to use your own cert
 Building your own images from source is possible, but neither supported nor recommended.It can be useful for incorporating very experimental features, testing new features, or using your own registry for persistent images.
 
 The supplied `Makefile` in the root of this project contains commands to control the build:
-1. Fork the [docker-splunk GitHub repository](https://github.com/splunk/docker-splunk/)
+1. Fork the [docker-splunk GitHub repository](https://github.com/khulnasoft-lab/docker-splunk/)
 1. Clone your fork using git and create a branch off develop
     ```bash
     $ git clone git@github.com:YOUR_GITHUB_USERNAME/docker-splunk.git
