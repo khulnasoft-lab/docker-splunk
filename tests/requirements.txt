@@ -1,5 +1,5 @@
 pytest==8.3.3
-pyrsistent==0.16.1
+pyrsistent==0.20.0
 requests
 docker
 PyYAML
