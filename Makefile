@@ -5,6 +5,11 @@ DOCKER_BUILD_FLAGS ?=
 SPLUNK_ANSIBLE_REPO ?= https://github.com/splunk/splunk-ansible.git
 SPLUNK_ANSIBLE_BRANCH ?= develop
 SPLUNK_COMPOSE ?= cluster_absolute_unit.yaml
+# Set spark/hadoop/jdk versions here to define downstream spark URLs
+SPLUNK_SPARK_VERSION ?= 2.3.3
+SPLUNK_HADOOP_VERSION ?= 2.7
+SPLUNK_JDK_VERSION ?= 8u212
+SPLUNK_JDK_BUILD ?= b03
 # Set Splunk version/build parameters here to define downstream URLs and file names
 SPLUNK_PRODUCT := splunk
 SPLUNK_VERSION := 9.2.0
@@ -200,6 +205,17 @@ splunk-windows-2016: base-windows-2016 ansible
 		--build-arg SPLUNK_BASE_IMAGE=base-windows-2016 \
 		--build-arg SPLUNK_BUILD_URL=${SPLUNK_WIN_BUILD_URL} \
 		-t splunk-windows-2016:${IMAGE_VERSION} .
+
+spark-debian-9: splunk-debian-9
+	docker build ${DOCKER_BUILD_FLAGS} \
+		-f spark/Dockerfile \
+		--build-arg SPLUNK_BASE_IMAGE=splunk-debian-9 \
+		--build-arg SPLUNK_BUILD_URL=${SPLUNK_LINUX_BUILD_URL} \
+		--build-arg SPARK_VERSION=${SPLUNK_SPARK_VERSION} \
+		--build-arg HADOOP_VERSION=${SPLUNK_HADOOP_VERSION} \
+		--build-arg JDK_VERSION=${SPLUNK_JDK_VERSION} \
+		--build-arg JDK_BUILD=${SPLUNK_JDK_BUILD} \
+		-t spark-debian-9:${IMAGE_VERSION} .
 
 ##### UF images #####
 uf: ansible uf-debian-9 uf-debian-10 uf-centos-7 uf-centos-8 uf-redhat-8
